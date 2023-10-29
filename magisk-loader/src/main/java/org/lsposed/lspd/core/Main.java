@@ -37,6 +37,6 @@ public class Main {
             return;
         }
         Utils.logI("Loading xposed for " + niceName + "/" + Process.myUid());
-        Startup.bootstrapXposed();
+//        Startup.bootstrapXposed();
     }
 }

@@ -75,12 +75,14 @@ public class Startup {
 
     public static void initXposed(boolean isSystem, String processName, String appDir, ILSPApplicationService service) {
         // init logger
-        ApplicationServiceClient.Init(service, processName);
-        XposedBridge.initXResources();
-        XposedInit.startsSystemServer = isSystem;
-        LSPosedContext.isSystemServer = isSystem;
-        LSPosedContext.appDir = appDir;
-        LSPosedContext.processName = processName;
-        PrebuiltMethodsDeopter.deoptBootMethods(); // do it once for secondary zygote
+//        ApplicationServiceClient.Init(service, processName);
+//        XposedBridge.initXResources();
+//        XposedInit.startsSystemServer = isSystem;
+//        LSPosedContext.isSystemServer = isSystem;
+//        LSPosedContext.appDir = appDir;
+//        LSPosedContext.processName = processName;
+//        PrebuiltMethodsDeopter.deoptBootMethods(); // do it once for secondary zygote
+        Utils.logI("Xposed 沒有初始化啊.... 被我注釋掉了....");
+
     }
 }
