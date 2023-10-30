@@ -280,6 +280,7 @@ namespace lspd {
         zygisk::Api *api_;
 
         void onLoad(zygisk::Api *api, JNIEnv *env) override {
+            LOGD("-----------zygisk_main.cpp onLoad-----------");
             env_ = env;
             api_ = api;
             MagiskLoader::Init();
@@ -310,21 +311,25 @@ namespace lspd {
         }
 
         void preAppSpecialize(zygisk::AppSpecializeArgs *args) override {
+            LOGD("-----------zygisk_main.cpp preAppSpecialize-----------");
             MagiskLoader::GetInstance()->OnNativeForkAndSpecializePre(
                     env_, args->uid, args->gids, args->nice_name,
                     args->is_child_zygote ? *args->is_child_zygote : false, args->app_data_dir);
         }
 
         void postAppSpecialize(const zygisk::AppSpecializeArgs *args) override {
+            LOGD("-----------zygisk_main.cpp postAppSpecialize-----------");
             MagiskLoader::GetInstance()->OnNativeForkAndSpecializePost(env_, args->nice_name, args->app_data_dir);
             if (*allowUnload) api_->setOption(zygisk::DLCLOSE_MODULE_LIBRARY);
         }
 
         void preServerSpecialize([[maybe_unused]] zygisk::ServerSpecializeArgs *args) override {
+            LOGD("-----------zygisk_main.cpp preServerSpecialize-----------");
             MagiskLoader::GetInstance()->OnNativeForkSystemServerPre(env_);
         }
 
         void postServerSpecialize([[maybe_unused]] const zygisk::ServerSpecializeArgs *args) override {
+            LOGD("-----------zygisk_main.cpp postServerSpecialize-----------");
             if (__system_property_find("ro.vendor.product.ztename")) {
                 auto *process = env_->FindClass("android/os/Process");
                 auto *set_argv0 = env_->GetStaticMethodID(process, "setArgV0",
