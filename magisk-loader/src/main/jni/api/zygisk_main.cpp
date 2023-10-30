@@ -284,7 +284,7 @@ namespace lspd {
             api_ = api;
             MagiskLoader::Init();
             ConfigImpl::Init();
-
+            LOGE("--------------onLoad------------");
             auto companion = api->connectCompanion();
             if (companion == -1) {
                 LOGE("Failed to connect to companion");
@@ -310,21 +310,25 @@ namespace lspd {
         }
 
         void preAppSpecialize(zygisk::AppSpecializeArgs *args) override {
+            LOGE("--------------preAppSpecialize------------");
             MagiskLoader::GetInstance()->OnNativeForkAndSpecializePre(
                     env_, args->uid, args->gids, args->nice_name,
                     args->is_child_zygote ? *args->is_child_zygote : false, args->app_data_dir);
         }
 
         void postAppSpecialize(const zygisk::AppSpecializeArgs *args) override {
+            LOGE("--------------postAppSpecialize------------");
             MagiskLoader::GetInstance()->OnNativeForkAndSpecializePost(env_, args->nice_name, args->app_data_dir);
             if (*allowUnload) api_->setOption(zygisk::DLCLOSE_MODULE_LIBRARY);
         }
 
         void preServerSpecialize([[maybe_unused]] zygisk::ServerSpecializeArgs *args) override {
+            LOGE("--------------preServerSpecialize------------");
             MagiskLoader::GetInstance()->OnNativeForkSystemServerPre(env_);
         }
 
         void postServerSpecialize([[maybe_unused]] const zygisk::ServerSpecializeArgs *args) override {
+            LOGE("--------------postServerSpecialize------------");
             if (__system_property_find("ro.vendor.product.ztename")) {
                 auto *process = env_->FindClass("android/os/Process");
                 auto *set_argv0 = env_->GetStaticMethodID(process, "setArgV0",
