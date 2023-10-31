@@ -98,54 +98,55 @@ namespace lspd {
 
     void
     MagiskLoader::OnNativeForkSystemServerPost(JNIEnv *env) {
-        if (!skip_) {
-            auto *instance = Service::instance();
-            auto system_server_binder = instance->RequestSystemServerBinder(env);
-            if (!system_server_binder) {
-                LOGF("Failed to get system server binder, system server initialization failed.");
-                return;
-            }
-
-            auto application_binder = instance->RequestApplicationBinderFromSystemServer(env, system_server_binder);
-
-            // Call application_binder directly if application binder is available,
-            // or we proxy the request from system server binder
-            auto &&next_binder = application_binder ? application_binder : system_server_binder;
-            const auto [dex_fd, size] = instance->RequestLSPDex(env, next_binder);
-            auto obfs_map = instance->RequestObfuscationMap(env, next_binder);
-            ConfigBridge::GetInstance()->obfuscation_map(std::move(obfs_map));
-            LoadDex(env, PreloadedDex(dex_fd, size));
-            close(dex_fd);
-            instance->HookBridge(*this, env);
-
-            if (application_binder) {
-                lsplant::InitInfo initInfo{
-                    .inline_hooker = [](auto t, auto r) {
-                        void* bk = nullptr;
-                        return HookFunction(t, r, &bk) == RS_SUCCESS ? bk : nullptr;
-                    },
-                    .inline_unhooker = [](auto t) {
-                        return UnhookFunction(t) == RT_SUCCESS ;
-                    },
-                    .art_symbol_resolver = [](auto symbol) {
-                        return GetArt()->getSymbAddress(symbol);
-                    },
-                    .art_symbol_prefix_resolver = [](auto symbol) {
-                        return GetArt()->getSymbPrefixFirstAddress(symbol);
-                    },
-                };
-                InitArtHooker(env, initInfo);
-                InitHooks(env);
-                SetupEntryClass(env);
-                FindAndCall(env, "forkCommon",
-                            "(ZLjava/lang/String;Ljava/lang/String;Landroid/os/IBinder;)V",
-                            JNI_TRUE, JNI_NewStringUTF(env, "system"), nullptr, application_binder);
-                GetArt(true);
-            } else {
-                LOGI("skipped system server");
-                GetArt(true);
-            }
-        }
+        LOGI("--------OnNativeForkSystemServerPost--------");
+//        if (!skip_) {
+//            auto *instance = Service::instance();
+//            auto system_server_binder = instance->RequestSystemServerBinder(env);
+//            if (!system_server_binder) {
+//                LOGF("Failed to get system server binder, system server initialization failed.");
+//                return;
+//            }
+//
+//            auto application_binder = instance->RequestApplicationBinderFromSystemServer(env, system_server_binder);
+//
+//            // Call application_binder directly if application binder is available,
+//            // or we proxy the request from system server binder
+//            auto &&next_binder = application_binder ? application_binder : system_server_binder;
+//            const auto [dex_fd, size] = instance->RequestLSPDex(env, next_binder);
+//            auto obfs_map = instance->RequestObfuscationMap(env, next_binder);
+//            ConfigBridge::GetInstance()->obfuscation_map(std::move(obfs_map));
+//            LoadDex(env, PreloadedDex(dex_fd, size));
+//            close(dex_fd);
+//            instance->HookBridge(*this, env);
+//
+//            if (application_binder) {
+//                lsplant::InitInfo initInfo{
+//                    .inline_hooker = [](auto t, auto r) {
+//                        void* bk = nullptr;
+//                        return HookFunction(t, r, &bk) == RS_SUCCESS ? bk : nullptr;
+//                    },
+//                    .inline_unhooker = [](auto t) {
+//                        return UnhookFunction(t) == RT_SUCCESS ;
+//                    },
+//                    .art_symbol_resolver = [](auto symbol) {
+//                        return GetArt()->getSymbAddress(symbol);
+//                    },
+//                    .art_symbol_prefix_resolver = [](auto symbol) {
+//                        return GetArt()->getSymbPrefixFirstAddress(symbol);
+//                    },
+//                };
+//                InitArtHooker(env, initInfo);
+//                InitHooks(env);
+//                SetupEntryClass(env);
+//                FindAndCall(env, "forkCommon",
+//                            "(ZLjava/lang/String;Ljava/lang/String;Landroid/os/IBinder;)V",
+//                            JNI_TRUE, JNI_NewStringUTF(env, "system"), nullptr, application_binder);
+//                GetArt(true);
+//            } else {
+//                LOGI("skipped system server");
+//                GetArt(true);
+//            }
+//        }
     }
 
     void MagiskLoader::OnNativeForkAndSpecializePre(JNIEnv *env,
@@ -189,48 +190,49 @@ namespace lspd {
 
     void
     MagiskLoader::OnNativeForkAndSpecializePost(JNIEnv *env, jstring nice_name, jstring app_dir) {
-        const JUTFString process_name(env, nice_name);
-        auto *instance = Service::instance();
-        auto binder = skip_ ? ScopedLocalRef<jobject>{env, nullptr}
-                            : instance->RequestBinder(env, nice_name);
-        if (binder) {
-            lsplant::InitInfo initInfo{
-                    .inline_hooker = [](auto t, auto r) {
-                        void* bk = nullptr;
-                        return HookFunction(t, r, &bk) == RS_SUCCESS ? bk : nullptr;
-                    },
-                    .inline_unhooker = [](auto t) {
-                        return UnhookFunction(t) == RT_SUCCESS;
-                    },
-                    .art_symbol_resolver = [](auto symbol){
-                        return GetArt()->getSymbAddress(symbol);
-                    },
-                    .art_symbol_prefix_resolver = [](auto symbol) {
-                        return GetArt()->getSymbPrefixFirstAddress(symbol);
-                    },
-            };
-            auto [dex_fd, size] = instance->RequestLSPDex(env, binder);
-            auto obfs_map = instance->RequestObfuscationMap(env, binder);
-            ConfigBridge::GetInstance()->obfuscation_map(std::move(obfs_map));
-            LoadDex(env, PreloadedDex(dex_fd, size));
-            close(dex_fd);
-            InitArtHooker(env, initInfo);
-            InitHooks(env);
-            SetupEntryClass(env);
-            LOGD("Done prepare");
-            FindAndCall(env, "forkCommon",
-                        "(ZLjava/lang/String;Ljava/lang/String;Landroid/os/IBinder;)V",
-                        JNI_FALSE, nice_name, app_dir, binder);
-            LOGD("injected xposed into {}", process_name.get());
-            setAllowUnload(false);
-            GetArt(true);
-        } else {
-            auto context = Context::ReleaseInstance();
-            auto service = Service::ReleaseInstance();
-            GetArt(true);
-            LOGD("skipped {}", process_name.get());
-            setAllowUnload(true);
-        }
+        LOGI("-----------OnNativeForkAndSpecializePost-----------");
+//        const JUTFString process_name(env, nice_name);
+//        auto *instance = Service::instance();
+//        auto binder = skip_ ? ScopedLocalRef<jobject>{env, nullptr}
+//                            : instance->RequestBinder(env, nice_name);
+//        if (binder) {
+//            lsplant::InitInfo initInfo{
+//                    .inline_hooker = [](auto t, auto r) {
+//                        void* bk = nullptr;
+//                        return HookFunction(t, r, &bk) == RS_SUCCESS ? bk : nullptr;
+//                    },
+//                    .inline_unhooker = [](auto t) {
+//                        return UnhookFunction(t) == RT_SUCCESS;
+//                    },
+//                    .art_symbol_resolver = [](auto symbol){
+//                        return GetArt()->getSymbAddress(symbol);
+//                    },
+//                    .art_symbol_prefix_resolver = [](auto symbol) {
+//                        return GetArt()->getSymbPrefixFirstAddress(symbol);
+//                    },
+//            };
+//            auto [dex_fd, size] = instance->RequestLSPDex(env, binder);
+//            auto obfs_map = instance->RequestObfuscationMap(env, binder);
+//            ConfigBridge::GetInstance()->obfuscation_map(std::move(obfs_map));
+//            LoadDex(env, PreloadedDex(dex_fd, size));
+//            close(dex_fd);
+//            InitArtHooker(env, initInfo);
+//            InitHooks(env);
+//            SetupEntryClass(env);
+//            LOGD("Done prepare");
+//            FindAndCall(env, "forkCommon",
+//                        "(ZLjava/lang/String;Ljava/lang/String;Landroid/os/IBinder;)V",
+//                        JNI_FALSE, nice_name, app_dir, binder);
+//            LOGD("injected xposed into {}", process_name.get());
+//            setAllowUnload(false);
+//            GetArt(true);
+//        } else {
+//            auto context = Context::ReleaseInstance();
+//            auto service = Service::ReleaseInstance();
+//            GetArt(true);
+//            LOGD("skipped {}", process_name.get());
+//            setAllowUnload(true);
+//        }
     }
 
     void MagiskLoader::setAllowUnload(bool unload) {
